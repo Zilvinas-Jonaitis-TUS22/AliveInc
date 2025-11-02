@@ -250,7 +250,6 @@ GameObject:
   - component: {fileID: 3949542262154055971}
   - component: {fileID: 107667866292751066}
   - component: {fileID: 1466026555362443974}
-  - component: {fileID: 2452531527491287}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -392,7 +391,7 @@ MonoBehaviour:
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
+  SynchronizeTransform: 0
   ActiveSceneSynchronization: 0
   SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
@@ -433,9 +432,9 @@ MonoBehaviour:
   SyncRotAngleX: 1
   SyncRotAngleY: 1
   SyncRotAngleZ: 1
-  SyncScaleX: 1
-  SyncScaleY: 1
-  SyncScaleZ: 1
+  SyncScaleX: 0
+  SyncScaleY: 0
+  SyncScaleZ: 0
   PositionThreshold: 0.001
   RotAngleThreshold: 0.01
   ScaleThreshold: 0.01
@@ -475,14 +474,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 4
-  jumpHeight: 1.2
-  gravity: -15
-  groundLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  groundedOffset: -0.1
-  groundedRadius: 0.5
+  moveSpeed: 7
+  jumpHeight: 2.5
+  gravity: -5
+  fallMultiplier: 2.5
+  jumpMultiplier: 2
+  terminalVelocity: -20
+  acceleration: 20
+  deceleration: 50
   playerCamera: {fileID: 481072803311919394}
   lookSpeed: 5
   maxLookAngle: 90
@@ -524,16 +523,3 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &2452531527491287
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8779818730418579394}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c389aa80448b8a648827eb20c00b2506, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
