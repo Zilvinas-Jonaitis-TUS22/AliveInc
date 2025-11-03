@@ -1,7 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
 
-[ExecuteAlways]
 [RequireComponent(typeof(BoxCollider))]
 public class TeleportZone : NetworkBehaviour
 {
@@ -21,37 +20,47 @@ public class TeleportZone : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        var player = other.GetComponent<NetworkObject>();
-        if (player != null && player.IsPlayerObject)
+        var netObj = other.GetComponent<NetworkObject>();
+        if (netObj != null && netObj.IsPlayerObject)
         {
-            Debug.Log($"[TeleportZone] Player {player.OwnerClientId} entered teleport zone.");
-            TeleportPlayerServerRpc(player.OwnerClientId);
+            ulong clientId = netObj.OwnerClientId;
+            TeleportPlayerServerRpc(clientId);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void TeleportPlayerServerRpc(ulong clientId)
     {
-        var netManager = NetworkManager.Singleton;
-        if (netManager == null) return;
+        if (NetworkManager.Singleton == null) return;
+        if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(clientId)) return;
 
-        if (netManager.ConnectedClients.TryGetValue(clientId, out var client))
+        TeleportClientRpc(clientId, teleportTarget.position, teleportTarget.rotation);
+    }
+
+    [ClientRpc]
+    private void TeleportClientRpc(ulong targetClientId, Vector3 pos, Quaternion rot)
+    {
+        if (NetworkManager.Singleton == null) return;
+        if (NetworkManager.Singleton.LocalClientId != targetClientId) return;
+
+        var localPlayer = NetworkManager.Singleton.SpawnManager.GetLocalPlayerObject();
+        if (localPlayer == null) return;
+
+        var handler = localPlayer.GetComponent<PlayerTeleportHandler>();
+        if (handler != null)
         {
-            var playerObject = client.PlayerObject;
-            if (playerObject != null && teleportTarget != null)
-            {
-                var controller = playerObject.GetComponent<CharacterController>();
-                if (controller != null) controller.enabled = false; // stop physics control
+            handler.TeleportLocal(pos, rot);
+            return;
+        }
 
-                playerObject.transform.SetPositionAndRotation(
-                    teleportTarget.position,
-                    teleportTarget.rotation
-                );
-
-                if (controller != null) controller.enabled = true; // resume control
-
-                Debug.Log($"[TeleportZone] Teleported player {clientId} to {teleportTarget.position}");
-            }
+        // fallback: if handler missing, set directly
+        var controller = localPlayer.GetComponent<CharacterController>();
+        if (controller != null) controller.enabled = false;
+        localPlayer.transform.SetPositionAndRotation(pos, rot);
+        if (controller != null)
+        {
+            controller.Move(Vector3.zero);
+            controller.enabled = true;
         }
     }
 
