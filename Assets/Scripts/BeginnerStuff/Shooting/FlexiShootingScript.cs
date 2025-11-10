@@ -31,14 +31,15 @@ public class FlexiShootingScript : NetworkBehaviour
     private float currentBloom = 0f;
 
     [Header("Recoil Settings")]
-    public float recoilAmount = 2f;
-    public float recoilHorizontalAmount = 0.5f;
+    public float verticalRecoilAmount = 2f;
+    public float horizontalRecoilAmount = 1f;
     public float recoilRecoverySpeed = 5f;
+    public float recoilStopDelay = 0.5f; // after 0.5s without shooting, freeze recoil
 
-    private float currentRecoilX = 0f;
-    private float currentRecoilY = 0f;
     private float targetRecoilX = 0f;
     private float targetRecoilY = 0f;
+    private float recoilTimer = 0f;
+    private bool recoilFrozen = false;
 
     private void Awake()
     {
@@ -65,13 +66,9 @@ public class FlexiShootingScript : NetworkBehaviour
         if (input.shoot && Time.time >= nextFireTime)
         {
             if (ammoLoaded > 0)
-            {
                 Shoot();
-            }
             else
-            {
                 needsReload = true;
-            }
         }
     }
 
@@ -83,7 +80,10 @@ public class FlexiShootingScript : NetworkBehaviour
         // Apply bloom
         Vector3 shootDir = ApplyBloom(playerCamera.transform.forward);
 
-        // Raycast for hit detection
+        // Red debug line
+        Debug.DrawRay(playerCamera.transform.position, shootDir * 100f, Color.red, 0.1f);
+
+        // Raycast hit detection
         if (Physics.Raycast(playerCamera.transform.position, shootDir, out RaycastHit hit, 200f))
         {
             var health = hit.collider.GetComponent<Health>();
@@ -91,7 +91,6 @@ public class FlexiShootingScript : NetworkBehaviour
             {
                 if (useNetworking)
                 {
-                    // Only server modifies networked health
                     if (IsServer)
                         health.TakeDamage(10f);
                 }
@@ -102,9 +101,9 @@ public class FlexiShootingScript : NetworkBehaviour
             }
         }
 
-        // Recoil
-        targetRecoilX += recoilAmount;
-        targetRecoilY += Random.Range(-recoilHorizontalAmount, recoilHorizontalAmount);
+        // Add punchy recoil
+        targetRecoilX += verticalRecoilAmount;
+        targetRecoilY += Random.Range(-horizontalRecoilAmount, horizontalRecoilAmount);
 
         // Increase bloom
         currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
@@ -166,13 +165,36 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         if (controller == null) return;
 
-        currentRecoilX = Mathf.Lerp(currentRecoilX, targetRecoilX, Time.deltaTime * 10f);
-        currentRecoilY = Mathf.Lerp(currentRecoilY, targetRecoilY, Time.deltaTime * 10f);
+        // Reset recoil timer if shooting
+        if (input.shoot)
+        {
+            recoilTimer = 0f;
+            recoilFrozen = false; // resume adding recoil
+        }
+        else
+        {
+            recoilTimer += Time.deltaTime;
 
-        targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, recoilRecoverySpeed * Time.deltaTime);
-        targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, recoilRecoverySpeed * Time.deltaTime);
+            // Freeze recoil offsets after delay
+            if (recoilTimer >= recoilStopDelay)
+            {
+                recoilFrozen = true;
+            }
+        }
 
-        controller.recoilOffsetX = currentRecoilX;
-        controller.recoilOffsetY = currentRecoilY;
+        if (!recoilFrozen)
+        {
+            // Apply recoil offsets to controller
+            controller.recoilOffsetX = targetRecoilX;
+            controller.recoilOffsetY = targetRecoilY;
+
+            // Slowly decay recoil while shooting
+            if (input.shoot)
+            {
+                targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, recoilRecoverySpeed * Time.deltaTime);
+                targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, recoilRecoverySpeed * Time.deltaTime);
+            }
+        }
+        // If recoilFrozen == true, we leave offsets as-is (camera stays at last recoil)
     }
 }
