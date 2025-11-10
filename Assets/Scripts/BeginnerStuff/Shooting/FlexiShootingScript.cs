@@ -31,15 +31,11 @@ public class FlexiShootingScript : NetworkBehaviour
     private float currentBloom = 0f;
 
     [Header("Recoil Settings")]
-    public float verticalRecoilAmount = 2f;
-    public float horizontalRecoilAmount = 1f;
-    public float recoilRecoverySpeed = 5f;
-    public float recoilStopDelay = 0.5f; // after 0.5s without shooting, freeze recoil
+    public float verticalRecoilAmount = 1.5f;
+    public float horizontalRecoilAmount = 0.6f;
 
-    private float targetRecoilX = 0f;
-    private float targetRecoilY = 0f;
-    private float recoilTimer = 0f;
-    private bool recoilFrozen = false;
+    private float targetRecoilX = 0f; // vertical
+    private float targetRecoilY = 0f; // horizontal
 
     private void Awake()
     {
@@ -80,13 +76,13 @@ public class FlexiShootingScript : NetworkBehaviour
         // Apply bloom
         Vector3 shootDir = ApplyBloom(playerCamera.transform.forward);
 
-        // Red debug line
-        Debug.DrawRay(playerCamera.transform.position, shootDir * 100f, Color.red, 0.1f);
+        // Debug ray
+        Debug.DrawRay(playerCamera.transform.position, shootDir * 100f, Color.red, 0.12f);
 
         // Raycast hit detection
         if (Physics.Raycast(playerCamera.transform.position, shootDir, out RaycastHit hit, 200f))
         {
-            var health = hit.collider.GetComponent<Health>();
+            Health health = hit.collider.GetComponent<Health>();
             if (health != null)
             {
                 if (useNetworking)
@@ -101,9 +97,13 @@ public class FlexiShootingScript : NetworkBehaviour
             }
         }
 
-        // Add punchy recoil
+        // Add recoil
         targetRecoilX += verticalRecoilAmount;
         targetRecoilY += Random.Range(-horizontalRecoilAmount, horizontalRecoilAmount);
+
+        // Clamp to reasonable values
+        targetRecoilX = Mathf.Clamp(targetRecoilX, -30f, 30f);
+        targetRecoilY = Mathf.Clamp(targetRecoilY, -30f, 30f);
 
         // Increase bloom
         currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
@@ -116,10 +116,8 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         if (reloading) return;
 
-        if (input.reload && (ammoLoaded < magSize && reserveAmmo > 0))
-        {
+        if (input.reload && ammoLoaded < magSize && reserveAmmo > 0)
             StartCoroutine(ReloadRoutine());
-        }
     }
 
     private IEnumerator ReloadRoutine()
@@ -156,45 +154,20 @@ public class FlexiShootingScript : NetworkBehaviour
     private void HandleBloom()
     {
         if (!input.shoot)
-        {
             currentBloom = Mathf.MoveTowards(currentBloom, 0f, bloomDecreaseRate * Time.deltaTime);
-        }
     }
 
     private void HandleRecoil()
     {
         if (controller == null) return;
 
-        // Reset recoil timer if shooting
         if (input.shoot)
         {
-            recoilTimer = 0f;
-            recoilFrozen = false; // resume adding recoil
-        }
-        else
-        {
-            recoilTimer += Time.deltaTime;
-
-            // Freeze recoil offsets after delay
-            if (recoilTimer >= recoilStopDelay)
-            {
-                recoilFrozen = true;
-            }
+            controller.ApplyRecoilInstant(targetRecoilX, targetRecoilY);
         }
 
-        if (!recoilFrozen)
-        {
-            // Apply recoil offsets to controller
-            controller.recoilOffsetX = targetRecoilX;
-            controller.recoilOffsetY = targetRecoilY;
-
-            // Slowly decay recoil while shooting
-            if (input.shoot)
-            {
-                targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, recoilRecoverySpeed * Time.deltaTime);
-                targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, recoilRecoverySpeed * Time.deltaTime);
-            }
-        }
-        // If recoilFrozen == true, we leave offsets as-is (camera stays at last recoil)
+        // Always decay recoil gradually so consecutive shots stack naturally
+        targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, 10f * Time.deltaTime);
+        targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, 10f * Time.deltaTime);
     }
 }

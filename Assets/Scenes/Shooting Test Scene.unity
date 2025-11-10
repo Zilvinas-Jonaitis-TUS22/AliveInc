@@ -575,6 +575,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 598250388}
   m_CullTransparentMesh: 1
+--- !u!114 &1411100416 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 107667866292751066, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+  m_PrefabInstance: {fileID: 2044440424}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64f27923675308146aaa96f88db415c3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1991741567
 GameObject:
   m_ObjectHideFlags: 0
@@ -844,13 +855,45 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 28028533}
     - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: ammoLoaded
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: controller
+      value: 
+      objectReference: {fileID: 1411100416}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: shootPoint
+      value: 
+      objectReference: {fileID: 28028533}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: reserveAmmo
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: playerCamera
       value: 
       objectReference: {fileID: 156866769}
     - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
-      propertyPath: horizontalRecoilAmount
-      value: 0.1
+      propertyPath: bloomDecreaseRate
+      value: 1.5
       objectReference: {fileID: 0}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: bloomIncreaseRate
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: verticalRecoilAmount
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: horizontalRecoilAmount
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 3949542262154055971, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: cameraRoot
+      value: 
+      objectReference: {fileID: 28028533}
     - target: {fileID: 3949542262154055971, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: useNetworking
       value: 0
@@ -898,6 +941,10 @@ PrefabInstance:
     - target: {fileID: 7253382866180451802, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: m_Enabled
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7902213620409124922, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8343699230293503322, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: m_Enabled

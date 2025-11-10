@@ -25,9 +25,9 @@ public class MultiplayerFirstPersonController : NetworkBehaviour
     public float lookSpeed = 1f;
     public float maxLookAngle = 90f;
 
-    [Header("Recoil")]
-    [HideInInspector] public float recoilOffsetX = 0f;
-    [HideInInspector] public float recoilOffsetY = 0f;
+    [Header("Recoil (controlled by gun)")]
+    private float recoilPitch;
+    private float recoilYaw;
 
     private CharacterController controller;
     private StarterAssetsInputs input;
@@ -42,8 +42,9 @@ public class MultiplayerFirstPersonController : NetworkBehaviour
         controller = GetComponent<CharacterController>();
         input = GetComponent<StarterAssetsInputs>();
 
+        // Camera should always be enabled for offline testing
         if (playerCamera != null)
-            playerCamera.gameObject.SetActive(false);
+            playerCamera.gameObject.SetActive(true);
     }
 
     public override void OnNetworkSpawn()
@@ -100,7 +101,7 @@ public class MultiplayerFirstPersonController : NetworkBehaviour
 
     private void HandleLook()
     {
-        // Mouse look
+        // Mouse input
         if (input.look.sqrMagnitude > threshold)
         {
             float mouseX = input.look.x * lookSpeed * Time.deltaTime;
@@ -111,11 +112,23 @@ public class MultiplayerFirstPersonController : NetworkBehaviour
             transform.Rotate(Vector3.up * mouseX);
         }
 
-        // Apply recoil additively
-        float finalPitch = Mathf.Clamp(cameraPitch - recoilOffsetX, -maxLookAngle, maxLookAngle);
-        if (playerCamera != null)
-            playerCamera.transform.localRotation = Quaternion.Euler(finalPitch, 0f, 0f);
+        // Apply recoil instantly (no decay)
+        cameraPitch = Mathf.Clamp(cameraPitch - recoilPitch, -maxLookAngle, maxLookAngle);
+        transform.Rotate(Vector3.up * recoilYaw);
 
-        transform.Rotate(Vector3.up * recoilOffsetY);
+        // Apply to camera
+        if (playerCamera != null)
+            playerCamera.transform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+
+        // Clear recoil each frame (so ApplyRecoilInstant only applies once)
+        recoilPitch = 0f;
+        recoilYaw = 0f;
+    }
+
+    // Called by gun when shooting
+    public void ApplyRecoilInstant(float pitchDeg, float yawDeg)
+    {
+        recoilPitch += pitchDeg;
+        recoilYaw += yawDeg;
     }
 }
