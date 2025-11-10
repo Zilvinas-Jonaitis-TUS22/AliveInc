@@ -306,6 +306,11 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!20 &156866769 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 481072803311919394, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+  m_PrefabInstance: {fileID: 2044440424}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &160665254
 GameObject:
   m_ObjectHideFlags: 0
@@ -487,6 +492,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &545600926 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3949542262154055971, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+  m_PrefabInstance: {fileID: 2044440424}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14a0d05f1edd75945b2341e35b9d5000, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &598250388
 GameObject:
   m_ObjectHideFlags: 0
@@ -820,9 +836,17 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: input
+      value: 
+      objectReference: {fileID: 545600926}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: firePoint
       value: 
       objectReference: {fileID: 28028533}
+    - target: {fileID: 3104381619117198457, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
+      propertyPath: playerCamera
+      value: 
+      objectReference: {fileID: 156866769}
     - target: {fileID: 3949542262154055971, guid: 92e4ca3283a264c47b55a53f8c40f0ca, type: 3}
       propertyPath: useNetworking
       value: 0

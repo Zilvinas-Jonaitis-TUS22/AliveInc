@@ -4,35 +4,47 @@ using System.Collections;
 
 public class FlexiShootingScript : NetworkBehaviour
 {
-    [Header("Networking / Control")]
+    [Header("References")]
+    public StarterAssetsInputs input;
+    public Camera playerCamera;
+    private MultiplayerFirstPersonController controller;
+
+    [Header("Network Settings")]
     public bool useNetworking = true;
 
-    [Header("Gun State")]
-    public bool isEquipped = false;
+    [Header("Weapon Settings")]
+    public bool isEquipped = true;
     public bool canShoot = true;
     public bool needsReload = false;
-    public bool isReloading = false;
-
-    [Header("Ammo")]
+    public bool reloading = false;
     public int ammoLoaded = 30;
+    public int magSize = 30;
     public int reserveAmmo = 90;
-    public int magazineSize = 30;
-    public float reloadTime = 2f;
-
-    [Header("Gun Settings")]
+    public float reloadTime = 2.0f;
     public float fireRate = 0.1f;
-    public float damage = 10f;
-    public Transform firePoint;
-    public float range = 100f;
-    public bool isAutomatic = true;
+    private float nextFireTime = 0f;
 
-    private StarterAssetsInputs input;
-    private float lastShotTime;
-    private Coroutine reloadCoroutine;
+    [Header("Bloom Settings")]
+    public float maxBloomAngle = 5f;
+    public float bloomIncreaseRate = 1f;
+    public float bloomDecreaseRate = 2f;
+    private float currentBloom = 0f;
+
+    [Header("Recoil Settings")]
+    public float recoilAmount = 2f;
+    public float recoilHorizontalAmount = 0.5f;
+    public float recoilRecoverySpeed = 5f;
+
+    private float currentRecoilX = 0f;
+    private float currentRecoilY = 0f;
+    private float targetRecoilX = 0f;
+    private float targetRecoilY = 0f;
 
     private void Awake()
     {
-        input = GetComponent<StarterAssetsInputs>();
+        if (!input) input = GetComponent<StarterAssetsInputs>();
+        if (!playerCamera) playerCamera = GetComponentInChildren<Camera>();
+        controller = GetComponent<MultiplayerFirstPersonController>();
     }
 
     private void Update()
@@ -42,126 +54,125 @@ public class FlexiShootingScript : NetworkBehaviour
 
         HandleShooting();
         HandleReloading();
+        HandleBloom();
+        HandleRecoil();
     }
 
     private void HandleShooting()
     {
-        if (!canShoot || isReloading) return;
+        if (!canShoot || reloading) return;
 
-        bool shouldShoot = isAutomatic ? input.shoot : input.shoot && Time.time - lastShotTime >= fireRate;
-
-        if (shouldShoot && Time.time - lastShotTime >= fireRate)
+        if (input.shoot && Time.time >= nextFireTime)
         {
-            if (ammoLoaded <= 0)
+            if (ammoLoaded > 0)
+            {
+                Shoot();
+            }
+            else
             {
                 needsReload = true;
-                return;
             }
-
-            // Cancel reload if shooting mid-reload
-            if (isReloading)
-            {
-                CancelReload();
-            }
-
-            FireRaycast();
-            ammoLoaded--;
-            lastShotTime = Time.time;
-
-            // Only set needsReload when magazine actually empty
-            if (ammoLoaded <= 0)
-                needsReload = true;
         }
     }
 
-    private void FireRaycast()
+    private void Shoot()
     {
-        if (firePoint == null) return;
+        nextFireTime = Time.time + fireRate;
+        ammoLoaded--;
 
-        Ray ray = new Ray(firePoint.position, firePoint.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, range))
+        // Apply bloom
+        Vector3 shootDir = ApplyBloom(playerCamera.transform.forward);
+
+        // Raycast for hit detection
+        if (Physics.Raycast(playerCamera.transform.position, shootDir, out RaycastHit hit, 200f))
         {
-            Debug.Log($"Hit {hit.collider.name} for {damage} damage!");
-
             var health = hit.collider.GetComponent<Health>();
             if (health != null)
-                health.TakeDamage(damage);
+            {
+                if (useNetworking)
+                {
+                    // Only server modifies networked health
+                    if (IsServer)
+                        health.TakeDamage(10f);
+                }
+                else
+                {
+                    health.TakeDamage(10f);
+                }
+            }
         }
 
-        Debug.DrawRay(firePoint.position, firePoint.forward * range, Color.red, 1f);
+        // Recoil
+        targetRecoilX += recoilAmount;
+        targetRecoilY += Random.Range(-recoilHorizontalAmount, recoilHorizontalAmount);
+
+        // Increase bloom
+        currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
+
+        if (ammoLoaded <= 0)
+            needsReload = true;
     }
 
     private void HandleReloading()
     {
-        // Only start reload if not already reloading, reserve ammo exists, and reload requested
-        if ((input.reload || needsReload) && !isReloading && reserveAmmo > 0)
+        if (reloading) return;
+
+        if (input.reload && (ammoLoaded < magSize && reserveAmmo > 0))
         {
-            needsReload = false; // Reset to prevent auto-restart
-            reloadCoroutine = StartCoroutine(ReloadCoroutine());
+            StartCoroutine(ReloadRoutine());
         }
     }
 
-    private IEnumerator ReloadCoroutine()
+    private IEnumerator ReloadRoutine()
     {
-        isReloading = true;
+        reloading = true;
         canShoot = false;
-        Debug.Log("Reloading...");
 
-        float timer = 0f;
-        while (timer < reloadTime)
-        {
-            // Cancel reload if shoot input is pressed
-            if (input.shoot)
-            {
-                Debug.Log("Reload canceled!");
-                CancelReload();
-                yield break;
-            }
+        yield return new WaitForSeconds(reloadTime);
 
-            timer += Time.deltaTime;
-            yield return null;
-        }
-
-        // Add leftover bullets to reserve only when reload finishes
+        // Return leftover bullets to reserve
         reserveAmmo += ammoLoaded;
+        ammoLoaded = 0;
 
-        // Fill magazine from reserve
-        int ammoToLoad = Mathf.Min(magazineSize, reserveAmmo);
-        reserveAmmo -= ammoToLoad;
+        // Fill magazine
+        int ammoToLoad = Mathf.Min(magSize, reserveAmmo);
         ammoLoaded = ammoToLoad;
+        reserveAmmo -= ammoToLoad;
 
-        isReloading = false;
+        reloading = false;
         canShoot = true;
-
-        // Only set needsReload if magazine still empty
-        needsReload = ammoLoaded <= 0;
-
-        Debug.Log($"Reload complete. Ammo loaded: {ammoLoaded}, Reserve: {reserveAmmo}");
+        needsReload = false;
     }
 
-    private void CancelReload()
+    private Vector3 ApplyBloom(Vector3 direction)
     {
-        if (reloadCoroutine != null)
+        if (currentBloom <= 0f) return direction;
+
+        float angleX = Random.Range(-currentBloom, currentBloom);
+        float angleY = Random.Range(-currentBloom, currentBloom);
+        Quaternion rotation = Quaternion.Euler(angleX, angleY, 0);
+        return rotation * direction;
+    }
+
+    private void HandleBloom()
+    {
+        if (!input.shoot)
         {
-            StopCoroutine(reloadCoroutine);
-            reloadCoroutine = null;
+            currentBloom = Mathf.MoveTowards(currentBloom, 0f, bloomDecreaseRate * Time.deltaTime);
         }
-
-        isReloading = false;
-        canShoot = true;
-
-        // Ammo stays in magazine, reserve unchanged
     }
 
-    public void SetEquipped(bool equipped)
+    private void HandleRecoil()
     {
-        isEquipped = equipped;
-    }
+        if (controller == null) return;
 
-    public void Fire()
-    {
-        input.shoot = true;
-        HandleShooting();
-        input.shoot = false;
+        currentRecoilX = Mathf.Lerp(currentRecoilX, targetRecoilX, Time.deltaTime * 10f);
+        currentRecoilY = Mathf.Lerp(currentRecoilY, targetRecoilY, Time.deltaTime * 10f);
+
+        targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, recoilRecoverySpeed * Time.deltaTime);
+        targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, recoilRecoverySpeed * Time.deltaTime);
+
+        controller.recoilOffsetX = currentRecoilX;
+        controller.recoilOffsetY = currentRecoilY;
     }
 }
