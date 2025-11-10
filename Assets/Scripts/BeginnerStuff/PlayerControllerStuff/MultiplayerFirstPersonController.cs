@@ -7,6 +7,10 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(NetworkObject))]
 public class MultiplayerFirstPersonController : NetworkBehaviour
 {
+    [Header("Testing / Networking")]
+    [Tooltip("If false, networking checks are ignored and this acts like a local player controller.")]
+    public bool useNetworking = true;
+
     [Header("Movement Settings")]
     public float moveSpeed = 4f;
     public float jumpHeight = 1.2f;
@@ -42,13 +46,22 @@ public class MultiplayerFirstPersonController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (!useNetworking)
+        {
+            // Skip network logic if offline
+            if (playerCamera != null)
+                playerCamera.gameObject.SetActive(true);
+            return;
+        }
+
         if (IsOwner && playerCamera != null)
             playerCamera.gameObject.SetActive(true);
     }
 
     private void Update()
     {
-        if (!IsOwner) return;
+        // Skip network ownership check if networking is disabled
+        if (useNetworking && !IsOwner) return;
 
         GroundedCheck();
         HandleMovement();
