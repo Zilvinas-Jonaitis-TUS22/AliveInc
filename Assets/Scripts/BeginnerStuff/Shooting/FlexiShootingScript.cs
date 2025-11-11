@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
 
@@ -34,14 +34,23 @@ public class FlexiShootingScript : NetworkBehaviour
     public float verticalRecoilAmount = 1.5f;
     public float horizontalRecoilAmount = 0.6f;
 
-    private float targetRecoilX = 0f; // vertical
-    private float targetRecoilY = 0f; // horizontal
+    [Header("FOV Kick Settings")]
+    public float normalFOV = 90f;
+    public float recoilFOV = 95f;
+    public float fovChangeSpeed = 8f;
+
+    private float targetRecoilX = 0f;
+    private float targetRecoilY = 0f;
+    private float currentFOVVelocity;
 
     private void Awake()
     {
         if (!input) input = GetComponent<StarterAssetsInputs>();
         if (!playerCamera) playerCamera = GetComponentInChildren<Camera>();
         controller = GetComponent<MultiplayerFirstPersonController>();
+
+        if (playerCamera)
+            playerCamera.fieldOfView = normalFOV;
     }
 
     private void Update()
@@ -53,6 +62,7 @@ public class FlexiShootingScript : NetworkBehaviour
         HandleReloading();
         HandleBloom();
         HandleRecoil();
+        HandleFOVKick();
     }
 
     private void HandleShooting()
@@ -73,13 +83,9 @@ public class FlexiShootingScript : NetworkBehaviour
         nextFireTime = Time.time + fireRate;
         ammoLoaded--;
 
-        // Apply bloom
         Vector3 shootDir = ApplyBloom(playerCamera.transform.forward);
-
-        // Debug ray
         Debug.DrawRay(playerCamera.transform.position, shootDir * 100f, Color.red, 0.12f);
 
-        // Raycast hit detection
         if (Physics.Raycast(playerCamera.transform.position, shootDir, out RaycastHit hit, 200f))
         {
             Health health = hit.collider.GetComponent<Health>();
@@ -97,15 +103,12 @@ public class FlexiShootingScript : NetworkBehaviour
             }
         }
 
-        // Add recoil
         targetRecoilX += verticalRecoilAmount;
         targetRecoilY += Random.Range(-horizontalRecoilAmount, horizontalRecoilAmount);
 
-        // Clamp to reasonable values
         targetRecoilX = Mathf.Clamp(targetRecoilX, -30f, 30f);
         targetRecoilY = Mathf.Clamp(targetRecoilY, -30f, 30f);
 
-        // Increase bloom
         currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
 
         if (ammoLoaded <= 0)
@@ -115,7 +118,6 @@ public class FlexiShootingScript : NetworkBehaviour
     private void HandleReloading()
     {
         if (reloading) return;
-
         if (input.reload && ammoLoaded < magSize && reserveAmmo > 0)
             StartCoroutine(ReloadRoutine());
     }
@@ -124,14 +126,10 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         reloading = true;
         canShoot = false;
-
         yield return new WaitForSeconds(reloadTime);
 
-        // Return leftover bullets to reserve
         reserveAmmo += ammoLoaded;
         ammoLoaded = 0;
-
-        // Fill magazine
         int ammoToLoad = Mathf.Min(magSize, reserveAmmo);
         ammoLoaded = ammoToLoad;
         reserveAmmo -= ammoToLoad;
@@ -160,14 +158,18 @@ public class FlexiShootingScript : NetworkBehaviour
     private void HandleRecoil()
     {
         if (controller == null) return;
-
         if (input.shoot)
-        {
             controller.ApplyRecoilInstant(targetRecoilX, targetRecoilY);
-        }
 
-        // Always decay recoil gradually so consecutive shots stack naturally
         targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, 10f * Time.deltaTime);
         targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, 10f * Time.deltaTime);
+    }
+
+    private void HandleFOVKick()
+    {
+        if (playerCamera == null) return;
+
+        float targetFOV = input.shoot & ammoLoaded > 0 ? recoilFOV : normalFOV;
+        playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, fovChangeSpeed * Time.deltaTime);
     }
 }
