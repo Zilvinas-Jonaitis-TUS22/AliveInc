@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Unity.Netcode;
 using System.Collections;
+using TMPro;
 
 public class FlexiShootingScript : NetworkBehaviour
 {
@@ -8,6 +9,11 @@ public class FlexiShootingScript : NetworkBehaviour
     public StarterAssetsInputs input;
     public Camera playerCamera;
     private MultiplayerFirstPersonController controller;
+
+    [Header("UI References")]
+    public TMP_Text needsReloadText;
+    public TMP_Text reloadingText;
+    public TMP_Text lowAmmoText;
 
     [Header("Network Settings")]
     public bool useNetworking = true;
@@ -38,10 +44,17 @@ public class FlexiShootingScript : NetworkBehaviour
     public float normalFOV = 90f;
     public float recoilFOV = 95f;
     public float fovChangeSpeed = 8f;
+    [Tooltip("Time in seconds the FOV stays at recoilFOV before returning to normal.")]
+    public float fovKickDuration = 0.2f;
+
+    [Header("Low Ammo Settings")]
+    public int lowAmmoThreshold = 5;
 
     private float targetRecoilX = 0f;
     private float targetRecoilY = 0f;
-    private float currentFOVVelocity;
+
+    private float targetFOV;
+    private float fovTimer;
 
     private void Awake()
     {
@@ -50,7 +63,24 @@ public class FlexiShootingScript : NetworkBehaviour
         controller = GetComponent<MultiplayerFirstPersonController>();
 
         if (playerCamera)
+        {
             playerCamera.fieldOfView = normalFOV;
+            targetFOV = normalFOV;
+        }
+
+        reloading = false;
+        canShoot = true;
+        needsReload = false;
+
+        if (ammoLoaded > magSize)
+            ammoLoaded = magSize;
+        if (ammoLoaded <= 0 && reserveAmmo > 0)
+            needsReload = true;
+
+        // Hide UI initially
+        if (needsReloadText) needsReloadText.gameObject.SetActive(false);
+        if (reloadingText) reloadingText.gameObject.SetActive(false);
+        if (lowAmmoText) lowAmmoText.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -63,6 +93,7 @@ public class FlexiShootingScript : NetworkBehaviour
         HandleBloom();
         HandleRecoil();
         HandleFOVKick();
+        HandleUI();
     }
 
     private void HandleShooting()
@@ -105,11 +136,14 @@ public class FlexiShootingScript : NetworkBehaviour
 
         targetRecoilX += verticalRecoilAmount;
         targetRecoilY += Random.Range(-horizontalRecoilAmount, horizontalRecoilAmount);
-
         targetRecoilX = Mathf.Clamp(targetRecoilX, -30f, 30f);
         targetRecoilY = Mathf.Clamp(targetRecoilY, -30f, 30f);
 
         currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
+
+        // Trigger FOV kick on bullet fire
+        targetFOV = recoilFOV;
+        fovTimer = fovKickDuration;
 
         if (ammoLoaded <= 0)
             needsReload = true;
@@ -126,6 +160,8 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         reloading = true;
         canShoot = false;
+        UpdateUI(); // Show "Reloading..."
+
         yield return new WaitForSeconds(reloadTime);
 
         reserveAmmo += ammoLoaded;
@@ -137,6 +173,7 @@ public class FlexiShootingScript : NetworkBehaviour
         reloading = false;
         canShoot = true;
         needsReload = false;
+        UpdateUI(); // Hide "Reloading..."
     }
 
     private Vector3 ApplyBloom(Vector3 direction)
@@ -167,9 +204,52 @@ public class FlexiShootingScript : NetworkBehaviour
 
     private void HandleFOVKick()
     {
-        if (playerCamera == null) return;
+        if (!playerCamera) return;
 
-        float targetFOV = input.shoot & ammoLoaded > 0 ? recoilFOV : normalFOV;
+        // Apply targetFOV
         playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, fovChangeSpeed * Time.deltaTime);
+
+        // Countdown timer
+        if (fovTimer > 0f)
+        {
+            fovTimer -= Time.deltaTime;
+            if (fovTimer <= 0f)
+            {
+                targetFOV = normalFOV;
+            }
+        }
+    }
+
+    private void HandleUI()
+    {
+        UpdateUI();
+    }
+
+    private void UpdateUI()
+    {
+        if (needsReload && !reloading)
+        {
+            SetTMPVisibility(needsReloadText, true);
+            SetTMPVisibility(reloadingText, false);
+        }
+        else if (reloading)
+        {
+            SetTMPVisibility(needsReloadText, false);
+            SetTMPVisibility(reloadingText, true);
+        }
+        else
+        {
+            SetTMPVisibility(needsReloadText, false);
+            SetTMPVisibility(reloadingText, false);
+        }
+
+        bool lowAmmo = ammoLoaded > 0 && ammoLoaded <= lowAmmoThreshold && !reloading;
+        SetTMPVisibility(lowAmmoText, lowAmmo);
+    }
+
+    private void SetTMPVisibility(TMP_Text text, bool visible)
+    {
+        if (text != null && text.gameObject.activeSelf != visible)
+            text.gameObject.SetActive(visible);
     }
 }
