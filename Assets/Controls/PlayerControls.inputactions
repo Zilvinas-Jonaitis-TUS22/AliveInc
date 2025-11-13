@@ -50,6 +50,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ADS",
+                    "type": "PassThrough",
+                    "id": "bb1cb515-7970-4c66-87cc-198a0be52037",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -121,8 +130,8 @@
                 },
                 {
                     "name": "",
-                    "id": "18a8ab45-2257-4be0-86f1-4d59f253fbba",
-                    "path": "<Mouse>/delta",
+                    "id": "d9209a96-e868-45f6-afbb-b45368594e8b",
+                    "path": "<Gamepad>/rightStick",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -132,8 +141,8 @@
                 },
                 {
                     "name": "",
-                    "id": "d9209a96-e868-45f6-afbb-b45368594e8b",
-                    "path": "<Gamepad>/rightStick",
+                    "id": "18a8ab45-2257-4be0-86f1-4d59f253fbba",
+                    "path": "<Mouse>/delta",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
@@ -176,12 +185,56 @@
                 },
                 {
                     "name": "",
+                    "id": "b313208e-484a-4004-8327-4454c138cde8",
+                    "path": "<Gamepad>/rightTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Shoot",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "fb91b3f2-bbfa-4004-bb33-6d85df2c1c24",
                     "path": "<Keyboard>/r",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "Reload",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5cc68df1-3cf1-4586-b526-1e5a84884e92",
+                    "path": "<Gamepad>/buttonWest",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Reload",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "f2e29585-ca83-49b6-abfb-7065b9fb0c0a",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ADS",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "059e153d-4d90-4031-bfe6-e649654c25f5",
+                    "path": "<Gamepad>/leftTrigger",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ADS",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

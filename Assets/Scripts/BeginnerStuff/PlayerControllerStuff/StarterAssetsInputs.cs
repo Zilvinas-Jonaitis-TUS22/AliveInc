@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -17,6 +17,7 @@ public class StarterAssetsInputs : NetworkBehaviour
     public bool jump;
     public bool shoot;
     public bool reload;
+    public bool ads; // 🎯 NEW: Aim Down Sights input
 
     [Header("Camera Settings")]
     [Tooltip("Mouse sensitivity multiplier for look input.")]
@@ -35,10 +36,7 @@ public class StarterAssetsInputs : NetworkBehaviour
     {
         if (useNetworking && !IsOwner) return;
 
-        // Get raw delta input from mouse or right stick
         Vector2 inputLook = value.Get<Vector2>();
-
-        // Ensure it's treated as a per-frame delta, not cumulative
         look = inputLook * lookSensitivity;
     }
 
@@ -61,6 +59,13 @@ public class StarterAssetsInputs : NetworkBehaviour
         // Trigger reload on button press only
         if (value.isPressed)
             reload = true;
+    }
+
+    // 🎯 NEW: Aim Down Sights input handler
+    public void OnADS(InputValue value)
+    {
+        if (useNetworking && !IsOwner) return;
+        ads = value.isPressed;
     }
 #endif
 
@@ -93,6 +98,6 @@ public class StarterAssetsInputs : NetworkBehaviour
         // Reset one-shot actions after they're used each physics step
         jump = false;
         reload = false;
-        // shoot intentionally left persistent until released
+        // shoot and ads stay persistent until released
     }
 }
