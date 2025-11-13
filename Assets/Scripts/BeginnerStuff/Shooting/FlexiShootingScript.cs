@@ -14,6 +14,10 @@ public class FlexiShootingScript : NetworkBehaviour
     public Camera mainCamera;
     public Camera firstPersonCamera;
 
+    [Header("Owner / Visibility Objects")]
+    public GameObject firstPersonObjects; // Visible only to owner
+    public GameObject thirdPersonObjects; // Visible only to non-owners
+
     [Header("Main Camera FOV Settings")]
     public float mainDefaultFOV = 90f;
     public float mainADSFOV = 60f;
@@ -71,7 +75,6 @@ public class FlexiShootingScript : NetworkBehaviour
 
     private float targetRecoilX = 0f;
     private float targetRecoilY = 0f;
-
     private bool isADS;
 
     private void Awake()
@@ -94,15 +97,44 @@ public class FlexiShootingScript : NetworkBehaviour
         HideAllUI();
     }
 
+    public override void OnNetworkSpawn()
+    {
+        bool isOwnerObject = !useNetworking || IsOwner;
+
+        // Cameras for owner only
+        if (mainCamera)
+        {
+            mainCamera.enabled = isOwnerObject;
+
+            AudioListener listener = mainCamera.GetComponent<AudioListener>();
+            if (listener) listener.enabled = isOwnerObject;
+        }
+
+        if (firstPersonCamera)
+        {
+            firstPersonCamera.enabled = isOwnerObject;
+
+            AudioListener fpListener = firstPersonCamera.GetComponent<AudioListener>();
+            if (fpListener) fpListener.enabled = false;
+        }
+
+        // First-person objects visible only to owner
+        if (firstPersonObjects)
+            firstPersonObjects.SetActive(isOwnerObject);
+
+        // Third-person objects visible only to others
+        if (thirdPersonObjects)
+            thirdPersonObjects.SetActive(!isOwnerObject);
+    }
+
     private void Start()
     {
-        // Delay initialization slightly to smooth startup FOV
         StartCoroutine(InitializeAfterFrame());
     }
 
     private IEnumerator InitializeAfterFrame()
     {
-        yield return null; // Wait one frame to let everything settle
+        yield return null;
         if (mainCamera) mainCamera.fieldOfView = mainDefaultFOV;
         if (firstPersonCamera) firstPersonCamera.fieldOfView = fpDefaultFOV;
         initialized = true;
@@ -112,6 +144,12 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         if (useNetworking && !IsOwner) return;
         if (!isEquipped || !initialized) return;
+
+        if (ammoLoaded <= 0)
+        {
+            isADS = false;
+            if (weaponAnimator) weaponAnimator.SetBool("ADS", false);
+        }
 
         HandleShooting();
         HandleReloading();
@@ -125,6 +163,13 @@ public class FlexiShootingScript : NetworkBehaviour
     private void HandleAnimatorADS()
     {
         if (!input || !weaponAnimator) return;
+
+        if (reloading || ammoLoaded <= 0)
+        {
+            isADS = false;
+            weaponAnimator.SetBool("ADS", false);
+            return;
+        }
 
         isADS = input.ads;
         weaponAnimator.SetBool("ADS", isADS);
@@ -206,14 +251,18 @@ public class FlexiShootingScript : NetworkBehaviour
 
         fovTimer = fovKickDuration;
 
-        if (ammoLoaded <= 0) needsReload = true;
+        if (ammoLoaded <= 0)
+        {
+            needsReload = true;
+            isADS = false;
+            if (weaponAnimator) weaponAnimator.SetBool("ADS", false);
+        }
     }
 
     private void HandleReloading()
     {
         if (reloading) return;
 
-        // Disable reload if ADSing
         if (input.reload && !isADS && ammoLoaded < magSize && reserveAmmo > 0)
             StartCoroutine(ReloadRoutine());
     }
@@ -227,6 +276,7 @@ public class FlexiShootingScript : NetworkBehaviour
         {
             weaponAnimator.SetBool("Shooting", false);
             weaponAnimator.SetBool("Reloading", true);
+            weaponAnimator.SetBool("ADS", false);
         }
 
         UpdateUI();
