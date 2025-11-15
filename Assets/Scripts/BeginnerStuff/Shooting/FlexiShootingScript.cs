@@ -15,25 +15,8 @@ public class FlexiShootingScript : NetworkBehaviour
     public Camera firstPersonCamera;
 
     [Header("Owner / Visibility Objects")]
-    public GameObject firstPersonObjects; // Visible only to owner
-    public GameObject thirdPersonObjects; // Visible only to non-owners
-
-    [Header("Main Camera FOV Settings")]
-    public float mainDefaultFOV = 90f;
-    public float mainADSFOV = 60f;
-    public float mainRecoilFOV = 3f;
-
-    [Header("First Person Camera FOV Settings")]
-    public float fpDefaultFOV = 80f;
-    public float fpADSFOV = 50f;
-    public float fpRecoilFOV = 2f;
-
-    [Header("Camera Settings")]
-    public float fovChangeSpeed = 8f;
-    public float fovKickDuration = 0.2f;
-
-    private float fovTimer;
-    private bool initialized = false;
+    public GameObject firstPersonObjects;
+    public GameObject thirdPersonObjects;
 
     [Header("Raycast Settings")]
     public Transform raycastOrigin;
@@ -46,36 +29,33 @@ public class FlexiShootingScript : NetworkBehaviour
     [Header("Network Settings")]
     public bool useNetworking = true;
 
-    [Header("Weapon Settings")]
-    public bool isEquipped = true;
-    public bool canShoot = true;
-    public bool needsReload = false;
-    public bool reloading = false;
-    public bool fullAuto = true;
-    public int ammoLoaded = 30;
-    public int magSize = 30;
-    public int reserveAmmo = 90;
-    public float reloadTime = 2.0f;
-    public float fireRate = 0.1f;
-    private float nextFireTime = 0f;
+    [Header("Gun Definition")]
+    [SerializeField] public WeaponManager weaponManager;
+
+    [Tooltip("Duration the recoil FOV kick lasts (seconds). Editable per-weapon instance.")]
+    public float fovKickDuration = 0.15f;
+    [Tooltip("How quickly FOV lerps toward targets.")]
+    public float fovChangeSpeed = 8f;
+
+    // Internal state
+    public int MaxAmmoReserve;
+    public int currentAmmoReserve;
+    private bool isADS;
+    private bool reloading = false;
+    private bool canShoot = true;
+    private bool needsReload = false;
     private bool hasReleasedSinceLastShot = true;
-
-    [Header("Bloom Settings")]
-    public float maxBloomAngle = 5f;
-    public float bloomIncreaseRate = 1f;
-    public float bloomDecreaseRate = 5f;
-    private float currentBloom = 5f;
-
-    [Header("Recoil Settings")]
-    public float verticalRecoilAmount = 1.5f;
-    public float horizontalRecoilAmount = 0.6f;
-
-    [Header("Low Ammo Settings")]
-    public int lowAmmoThreshold = 5;
-
+    private int ammoLoaded = 999;
+    private float nextFireTime = 0f;
     private float targetRecoilX = 0f;
     private float targetRecoilY = 0f;
-    private bool isADS;
+    private float fovKickAmountMain = 0f;
+    private float fovKickAmountFP = 0f;
+    private float currentBloom;
+    private float fovTimer;
+    private bool initialized = false;
+
+    public GunDefinitionSO currentGunDefinition = null;
 
     private void Awake()
     {
@@ -84,15 +64,10 @@ public class FlexiShootingScript : NetworkBehaviour
         if (!firstPersonCamera) firstPersonCamera = GetComponentInChildren<Camera>();
         controller = GetComponent<MultiplayerFirstPersonController>();
 
-        if (mainCamera) mainCamera.fieldOfView = mainDefaultFOV;
-        if (firstPersonCamera) firstPersonCamera.fieldOfView = fpDefaultFOV;
+        SetGunDefinition(weaponManager.weaponDefinitions[weaponManager.startingWeaponIndex]);
 
-        reloading = false;
-        canShoot = true;
-        needsReload = false;
-
-        ammoLoaded = Mathf.Clamp(ammoLoaded, 0, magSize);
-        if (ammoLoaded <= 0 && reserveAmmo > 0) needsReload = true;
+        ammoLoaded = currentGunDefinition.magSize;
+        currentBloom = currentGunDefinition.maxBloomAngle;
 
         HideAllUI();
     }
@@ -101,11 +76,9 @@ public class FlexiShootingScript : NetworkBehaviour
     {
         bool isOwnerObject = !useNetworking || IsOwner;
 
-        // Cameras for owner only
         if (mainCamera)
         {
             mainCamera.enabled = isOwnerObject;
-
             AudioListener listener = mainCamera.GetComponent<AudioListener>();
             if (listener) listener.enabled = isOwnerObject;
         }
@@ -113,42 +86,33 @@ public class FlexiShootingScript : NetworkBehaviour
         if (firstPersonCamera)
         {
             firstPersonCamera.enabled = isOwnerObject;
-
             AudioListener fpListener = firstPersonCamera.GetComponent<AudioListener>();
             if (fpListener) fpListener.enabled = false;
         }
 
-        // First-person objects visible only to owner
-        if (firstPersonObjects)
-            firstPersonObjects.SetActive(isOwnerObject);
-
-        // Third-person objects visible only to others
-        if (thirdPersonObjects)
-            thirdPersonObjects.SetActive(!isOwnerObject);
+        if (firstPersonObjects) firstPersonObjects.SetActive(isOwnerObject);
+        if (thirdPersonObjects) thirdPersonObjects.SetActive(!isOwnerObject);
     }
 
-    private void Start()
-    {
-        StartCoroutine(InitializeAfterFrame());
-    }
+    private void Start() => StartCoroutine(InitializeAfterFrame());
 
     private IEnumerator InitializeAfterFrame()
     {
         yield return null;
-        if (mainCamera) mainCamera.fieldOfView = mainDefaultFOV;
-        if (firstPersonCamera) firstPersonCamera.fieldOfView = fpDefaultFOV;
+        if (mainCamera) mainCamera.fieldOfView = currentGunDefinition.mainDefaultFOV;
+        if (firstPersonCamera) firstPersonCamera.fieldOfView = currentGunDefinition.fpDefaultFOV;
         initialized = true;
     }
 
     private void Update()
     {
         if (useNetworking && !IsOwner) return;
-        if (!isEquipped || !initialized) return;
+        if (!initialized) return;
 
         if (ammoLoaded <= 0)
         {
             isADS = false;
-            if (weaponAnimator) weaponAnimator.SetBool("ADS", false);
+            weaponAnimator?.SetBool("ADS", false);
         }
 
         HandleShooting();
@@ -177,16 +141,10 @@ public class FlexiShootingScript : NetworkBehaviour
 
     private void HandleShooting()
     {
-        if (reloading)
-        {
-            if (weaponAnimator)
-                weaponAnimator.SetBool("Shooting", false);
-            return;
-        }
-
+        if (reloading) { weaponAnimator?.SetBool("Shooting", false); return; }
         if (!canShoot) return;
 
-        if (fullAuto)
+        if (currentGunDefinition.fullAuto)
         {
             if (input.shoot && Time.time >= nextFireTime)
             {
@@ -203,143 +161,159 @@ public class FlexiShootingScript : NetworkBehaviour
 
                 hasReleasedSinceLastShot = false;
             }
-
-            if (!input.shoot)
-                hasReleasedSinceLastShot = true;
+            if (!input.shoot) hasReleasedSinceLastShot = true;
         }
-
-        if (weaponAnimator)
-            weaponAnimator.SetBool("Shooting", input.shoot && canShoot && !reloading && ammoLoaded > 0);
     }
 
     private void Shoot()
     {
-        nextFireTime = Time.time + fireRate;
+        nextFireTime = Time.time + currentGunDefinition.fireRate;
         ammoLoaded--;
 
+        // --- Raycast ---
         Vector3 origin = raycastOrigin ? raycastOrigin.position : firstPersonCamera.transform.position;
         Vector3 direction = raycastOrigin ? raycastOrigin.forward : firstPersonCamera.transform.forward;
         Vector3 shootDir = ApplyBloom(direction);
 
-        Debug.DrawRay(origin, shootDir * 100f, Color.red, 0.12f);
+        // DEBUG: visualize the shot
+        Debug.DrawRay(origin, shootDir * 100f, Color.red, 0.2f);
+
         if (Physics.Raycast(origin, shootDir, out RaycastHit hit, 200f))
         {
             Health health = hit.collider.GetComponent<Health>();
             if (health != null)
             {
-                if (useNetworking)
-                {
-                    if (IsServer) health.TakeDamage(10f);
-                }
-                else
-                {
-                    health.TakeDamage(10f);
-                }
+                if (useNetworking && IsServer)
+                    health.TakeDamage(currentGunDefinition.damage);
+                else if (!useNetworking)
+                    health.TakeDamage(currentGunDefinition.damage);
             }
         }
 
-        targetRecoilX += verticalRecoilAmount;
-        targetRecoilY += Random.Range(-horizontalRecoilAmount, horizontalRecoilAmount);
+        // --- Recoil ---
+        targetRecoilX += currentGunDefinition.verticalRecoilAmount;
+
+        // Horizontal recoil with weight
+        float min = -currentGunDefinition.horizontalRecoilAmount;
+        float max = currentGunDefinition.horizontalRecoilAmount;
+        float weight = Mathf.Clamp(currentGunDefinition.horizontalRecoilWeight, -1f, 1f);
+
+        if (weight < 0f) max *= (1f + weight);      // reduce right movement
+        else if (weight > 0f) min *= (1f - weight); // reduce left movement
+
+        targetRecoilY += Random.Range(min, max);
+
+        // Clamp recoil
         targetRecoilX = Mathf.Clamp(targetRecoilX, -30f, 30f);
         targetRecoilY = Mathf.Clamp(targetRecoilY, -30f, 30f);
 
+        // --- Bloom ---
         if (!isADS)
-            currentBloom = Mathf.Min(currentBloom + bloomIncreaseRate, maxBloomAngle);
+            currentBloom = Mathf.Min(currentBloom + currentGunDefinition.bloomIncreaseRate, currentGunDefinition.maxBloomAngle);
 
-        if (weaponAnimator && ammoLoaded > 0)
-            weaponAnimator.SetTrigger("Shoot");
+        // --- Animation ---
+        weaponAnimator?.SetTrigger("Shoot");
 
-        fovTimer = fovKickDuration;
+        // --- FOV Recoil ---
+        fovKickAmountMain = currentGunDefinition.fovRecoilMain;
+        fovKickAmountFP = currentGunDefinition.fovRecoilFP;
+        fovTimer = currentGunDefinition.fovKickDuration;
 
+        // --- Ammo check ---
         if (ammoLoaded <= 0)
         {
             needsReload = true;
             isADS = false;
-            if (weaponAnimator) weaponAnimator.SetBool("ADS", false);
+            weaponAnimator?.SetBool("ADS", false);
         }
     }
 
+
+
+
     private void HandleReloading()
     {
-        if (reloading) return;
-
-        if (input.reload && !isADS && ammoLoaded < magSize && reserveAmmo > 0)
+        if (reloading || !input.reload) return;
+        if (input.reload && !isADS && (ammoLoaded < currentGunDefinition.magSize) && currentAmmoReserve > 0)
+            if (currentAmmoReserve > MaxAmmoReserve)
+            {
+                currentAmmoReserve = MaxAmmoReserve;
+            }
             StartCoroutine(ReloadRoutine());
     }
+
 
     private IEnumerator ReloadRoutine()
     {
         reloading = true;
         canShoot = false;
 
-        if (weaponAnimator)
-        {
-            weaponAnimator.SetBool("Shooting", false);
-            weaponAnimator.SetBool("Reloading", true);
-            weaponAnimator.SetBool("ADS", false);
-        }
+        weaponAnimator?.SetBool("Shooting", false);
+        weaponAnimator?.SetBool("Reloading", true);
+        weaponAnimator?.SetBool("ADS", false);
 
         UpdateUI();
-        yield return new WaitForSeconds(reloadTime);
+        yield return new WaitForSeconds(currentGunDefinition.reloadTime);
 
-        if (weaponAnimator)
-            weaponAnimator.SetBool("Reloading", false);
+        weaponAnimator?.SetBool("Reloading", false);
 
-        reserveAmmo += ammoLoaded;
+        currentAmmoReserve += ammoLoaded;
         ammoLoaded = 0;
-        int ammoToLoad = Mathf.Min(magSize, reserveAmmo);
+        int ammoToLoad = Mathf.Min(currentGunDefinition.magSize, currentAmmoReserve);
         ammoLoaded = ammoToLoad;
-        reserveAmmo -= ammoToLoad;
+        currentAmmoReserve -= ammoToLoad;
 
         reloading = false;
         canShoot = true;
         needsReload = false;
+
         UpdateUI();
     }
+
 
     private Vector3 ApplyBloom(Vector3 direction)
     {
         if (currentBloom <= 0f) return direction;
-
         float angleX = Random.Range(-currentBloom, currentBloom);
         float angleY = Random.Range(-currentBloom, currentBloom);
-        Quaternion rotation = Quaternion.Euler(angleX, angleY, 0);
-        return rotation * direction;
+        return Quaternion.Euler(angleX, angleY, 0) * direction;
     }
 
     private void HandleBloom()
     {
-        float targetBloom = isADS ? 0f : maxBloomAngle;
-        currentBloom = Mathf.Lerp(currentBloom, targetBloom, bloomDecreaseRate * Time.deltaTime);
+        float targetBloom = isADS ? 0f : currentGunDefinition.maxBloomAngle;
+        currentBloom = Mathf.Lerp(currentBloom, targetBloom, currentGunDefinition.bloomDecreaseRate * Time.deltaTime);
     }
 
     private void HandleRecoil()
     {
         if (controller == null) return;
-
-        if (input.shoot)
-            controller.ApplyRecoilInstant(targetRecoilX, targetRecoilY);
-
+        if (input.shoot) controller.ApplyRecoilInstant(targetRecoilX, targetRecoilY);
         targetRecoilX = Mathf.MoveTowards(targetRecoilX, 0f, 10f * Time.deltaTime);
         targetRecoilY = Mathf.MoveTowards(targetRecoilY, 0f, 10f * Time.deltaTime);
     }
 
     private void HandleCameraFOV()
     {
-        if (!mainCamera || !firstPersonCamera) return;
+        if (!mainCamera || !firstPersonCamera || currentGunDefinition == null) return;
 
-        float mainBaseFOV = isADS ? mainADSFOV : mainDefaultFOV;
-        float fpBaseFOV = isADS ? fpADSFOV : fpDefaultFOV;
+        float baseMain = isADS ? currentGunDefinition.mainADSFOV : currentGunDefinition.mainDefaultFOV;
+        float baseFP = isADS ? currentGunDefinition.fpADSFOV : currentGunDefinition.fpDefaultFOV;
 
-        float mainTarget = mainBaseFOV + (fovTimer > 0f ? mainRecoilFOV : 0f);
-        float fpTarget = fpBaseFOV + (fovTimer > 0f ? fpRecoilFOV : 0f);
+        float addMain = (fovTimer > 0f) ? fovKickAmountMain : 0f;
+        float addFP = (fovTimer > 0f) ? fovKickAmountFP : 0f;
+
+        float targetMain = baseMain + addMain;
+        float targetFP = baseFP + addFP;
+
+        float speed = Mathf.Max(0.001f, currentGunDefinition.fovChangeSpeed);
+        mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, targetMain, Time.deltaTime * speed);
+        firstPersonCamera.fieldOfView = Mathf.Lerp(firstPersonCamera.fieldOfView, targetFP, Time.deltaTime * speed);
 
         if (fovTimer > 0f)
             fovTimer -= Time.deltaTime;
-
-        mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, mainTarget, Time.deltaTime * fovChangeSpeed);
-        firstPersonCamera.fieldOfView = Mathf.Lerp(firstPersonCamera.fieldOfView, fpTarget, Time.deltaTime * fovChangeSpeed);
     }
+
 
     private void HandleUI() => UpdateUI();
 
@@ -361,7 +335,7 @@ public class FlexiShootingScript : NetworkBehaviour
             SetTMPVisibility(reloadingText, false);
         }
 
-        bool lowAmmo = ammoLoaded > 0 && ammoLoaded <= lowAmmoThreshold && !reloading;
+        bool lowAmmo = ammoLoaded > 0 && ammoLoaded <= currentGunDefinition.lowAmmoThreshold && !reloading;
         SetTMPVisibility(lowAmmoText, lowAmmo);
     }
 
@@ -376,5 +350,14 @@ public class FlexiShootingScript : NetworkBehaviour
         if (needsReloadText) needsReloadText.gameObject.SetActive(false);
         if (reloadingText) reloadingText.gameObject.SetActive(false);
         if (lowAmmoText) lowAmmoText.gameObject.SetActive(false);
+    }
+
+    public void SetGunDefinition(GunDefinitionSO newDef)
+    {
+        currentGunDefinition = newDef;
+        currentGunDefinition = newDef;
+        ammoLoaded = currentGunDefinition.magSize;
+        currentBloom = currentGunDefinition.maxBloomAngle;
+        MaxAmmoReserve = currentGunDefinition.magSize * 8;
     }
 }

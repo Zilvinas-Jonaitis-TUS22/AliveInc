@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e32d2c84ab92b7b48aeb56984ee02747, type: 3}
+  m_Name: Ironvale P&A
+  m_EditorClassIdentifier: 
+  gunName: Ironvale P&A
+  damage: 24
+  magSize: 20
+  reloadTime: 1.5
+  fullAuto: 1
+  lowAmmoThreshold: 4
+  fireRate: 0.2
+  verticalRecoilAmount: 0.32
+  horizontalRecoilAmount: 0.12
+  horizontalRecoilWeight: 0.25
+  maxBloomAngle: 3
+  bloomIncreaseRate: 1
+  bloomDecreaseRate: 4
+  mainDefaultFOV: 80
+  mainADSFOV: 40
+  mainRecoilFOV: 5
+  fpDefaultFOV: 40
+  fpADSFOV: 20
+  fpRecoilFOV: 5
+  fovRecoilMain: 4
+  fovRecoilFP: -6
+  fovKickDuration: 0.05
+  fovChangeSpeed: 20

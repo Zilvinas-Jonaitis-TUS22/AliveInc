@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e32d2c84ab92b7b48aeb56984ee02747, type: 3}
+  m_Name: HPL-MK22
+  m_EditorClassIdentifier: 
+  gunName: HPL-MK22
+  damage: 8
+  magSize: 40
+  reloadTime: 2
+  fullAuto: 1
+  lowAmmoThreshold: 5
+  fireRate: 0.09
+  verticalRecoilAmount: 0.22
+  horizontalRecoilAmount: 0.35
+  horizontalRecoilWeight: -0.45
+  maxBloomAngle: 4
+  bloomIncreaseRate: 1
+  bloomDecreaseRate: 4
+  mainDefaultFOV: 80
+  mainADSFOV: 40
+  mainRecoilFOV: 3
+  fpDefaultFOV: 40
+  fpADSFOV: 20
+  fpRecoilFOV: 2
+  fovRecoilMain: 4
+  fovRecoilFP: -3
+  fovKickDuration: 0.04
+  fovChangeSpeed: 15
