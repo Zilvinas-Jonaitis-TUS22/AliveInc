@@ -646,11 +646,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9505c7250bde1994eb705ffd0c9b0b1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fpParent: {fileID: 1916496643173026434}
-  tpParent: {fileID: 905288075119799931}
-  currentGun: {fileID: 11400000, guid: f3b99299f26dd3740b0a4be4f3b6a773, type: 2}
-  weaponAnimator: {fileID: 5212652607495898505}
-  shooter: {fileID: 3104381619117198457}
+  weaponDefinitions: []
+  startingWeaponIndex: 0
 --- !u!114 &3104381619117198457
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -675,6 +672,12 @@ MonoBehaviour:
   reloadingText: {fileID: 0}
   lowAmmoText: {fileID: 0}
   useNetworking: 1
+  weaponManager: {fileID: 0}
+  fovKickDuration: 0.15
+  fovChangeSpeed: 8
+  MaxAmmoReserve: 0
+  currentAmmoReserve: 0
+  currentGunDefinition: {fileID: 0}
 --- !u!114 &107667866292751066
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1346,6 +1349,10 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 7
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 79d71cd7c5956b34388a189aaefb1e3c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1214824004972775095, guid: 79d71cd7c5956b34388a189aaefb1e3c, type: 3}
       propertyPath: m_Layer
       value: 7
@@ -1478,7 +1485,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 4015c0cbdebe4eb45b3a5498cda5a8d1, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1214824004972775095, guid: 4015c0cbdebe4eb45b3a5498cda5a8d1, type: 3}
       propertyPath: m_Layer
