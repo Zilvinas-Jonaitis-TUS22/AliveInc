@@ -20,8 +20,8 @@ MonoBehaviour:
   lowAmmoThreshold: 5
   fireRate: 0.09
   verticalRecoilAmount: 0.22
-  horizontalRecoilAmount: 0.35
-  horizontalRecoilWeight: -0.45
+  horizontalRecoilAmount: 0.29
+  horizontalRecoilWeight: -0.6
   maxBloomAngle: 4
   bloomIncreaseRate: 1
   bloomDecreaseRate: 4
