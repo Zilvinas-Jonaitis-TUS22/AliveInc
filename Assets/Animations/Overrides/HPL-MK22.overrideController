@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: HPL-MK22
+  m_Controller: {fileID: 9100000, guid: 7a9c692a716b82f40a17a7ba429ab457, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: 89340cea6361b8447b679ce545283a6c, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 89340cea6361b8447b679ce545283a6c, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: a4556cc589e3ce843a34f853392ecbf5, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: a4556cc589e3ce843a34f853392ecbf5, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: cb52f6344352d2740b10a60e5a0514b8, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: cb52f6344352d2740b10a60e5a0514b8, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: a829742605875e84d82d89b5a226e720, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: a829742605875e84d82d89b5a226e720, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: ef56d74d6782bd543992429a354ee3f5, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: ef56d74d6782bd543992429a354ee3f5, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 7da9f7990eaea8d4e9c792bf415025ca, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 7da9f7990eaea8d4e9c792bf415025ca, type: 2}
